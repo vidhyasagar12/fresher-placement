@@ -1,5 +1,6 @@
 /**
  * HTML5 Canvas 1080x1080 Instagram Poster Generator for FresherPlacement
+ * Renders high-contrast, crisp typography for Company, Role, Location, Salary, Experience & Tech Stack.
  */
 export async function generateJobPoster(job) {
   const canvas = document.createElement('canvas');
@@ -9,167 +10,224 @@ export async function generateJobPoster(job) {
 
   if (!ctx) throw new Error('Could not get canvas context');
 
-  // 1. Background Gradient
-  const bgGradient = ctx.createLinearGradient(0, 0, 1080, 1080);
-  bgGradient.addColorStop(0, '#0f0c1b');
-  bgGradient.addColorStop(0.5, '#181033');
-  bgGradient.addColorStop(1, '#0b0614');
-  ctx.fillStyle = bgGradient;
+  // Extract Job Data with fallback values
+  const company = (job.company || 'Top Tech Company').trim();
+  const role = (job.role || 'Software Development Engineer').trim();
+  const location = (job.location || 'Pan India').trim();
+  const type = (job.type || 'Onsite').trim();
+  const salary = (job.salary || 'Best in Industry').trim();
+  const experience = (job.experience || 'Fresher (0-1 yr)').trim();
+  const logoChar = (job.logo || company || 'C').charAt(0).toUpperCase();
+  const logoColor = job.logoColor || job.logo_color || '#6c3cfc';
+
+  // 1. Canvas Background
+  ctx.save();
+  const bgGrad = ctx.createLinearGradient(0, 0, 1080, 1080);
+  bgGrad.addColorStop(0, '#090714');
+  bgGrad.addColorStop(0.5, '#160e2e');
+  bgGrad.addColorStop(1, '#0b0616');
+  ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, 1080, 1080);
 
-  // Decorative ambient glow circles
-  const glow1 = ctx.createRadialGradient(200, 200, 10, 200, 200, 450);
-  glow1.addColorStop(0, 'rgba(108, 60, 252, 0.35)');
+  // Radial Ambient Light
+  const glow1 = ctx.createRadialGradient(200, 200, 10, 200, 200, 500);
+  glow1.addColorStop(0, 'rgba(108, 60, 252, 0.4)');
   glow1.addColorStop(1, 'rgba(108, 60, 252, 0)');
   ctx.fillStyle = glow1;
   ctx.fillRect(0, 0, 1080, 1080);
 
-  const glow2 = ctx.createRadialGradient(880, 880, 10, 880, 880, 450);
-  glow2.addColorStop(0, 'rgba(233, 30, 140, 0.25)');
+  const glow2 = ctx.createRadialGradient(880, 880, 10, 880, 880, 500);
+  glow2.addColorStop(0, 'rgba(233, 30, 140, 0.3)');
   glow2.addColorStop(1, 'rgba(233, 30, 140, 0)');
   ctx.fillStyle = glow2;
   ctx.fillRect(0, 0, 1080, 1080);
 
-  // Outer border frame
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  // Outer Border Frame
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
   ctx.lineWidth = 4;
-  ctx.strokeRect(30, 30, 1020, 1020);
+  ctx.rect(30, 30, 1020, 1020);
+  ctx.stroke();
 
-  // 2. Header Bar
-  ctx.fillStyle = '#6c3cfc';
-  ctx.roundRect(80, 70, 920, 70, 16);
+  // 2. Top Header Bar
+  ctx.beginPath();
+  const headerGrad = ctx.createLinearGradient(80, 70, 1000, 70);
+  headerGrad.addColorStop(0, '#6c3cfc');
+  headerGrad.addColorStop(1, '#9333ea');
+  ctx.fillStyle = headerGrad;
+  ctx.roundRect(80, 65, 920, 75, 18);
   ctx.fill();
 
-  ctx.font = '900 28px Inter, sans-serif';
-  ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'center';
-  ctx.fillText('🚨 NEW JOB OPENING • FRESHER PLACEMENT 🚨', 540, 115);
+  ctx.textBaseline = 'middle';
+  ctx.font = '900 28px "Inter", system-ui, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('🚨 NEW JOB OPENING • FRESHER PLACEMENT 🚨', 540, 1025 / 10);
 
-  // 3. Main Content Card Container
+  // 3. Main Content Container Card
+  ctx.beginPath();
   ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
   ctx.lineWidth = 2;
-  ctx.roundRect(80, 175, 920, 740, 28);
+  ctx.roundRect(80, 165, 920, 750, 24);
   ctx.fill();
   ctx.stroke();
 
-  // 4. Company Logo & Name
-  const logoColor = job.logoColor || job.logo_color || '#6c3cfc';
-  const logoChar = (job.logo || job.company || 'C').charAt(0).toUpperCase();
+  // 4. Company Logo Circle & Name
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
 
-  // Draw Logo Circle
-  ctx.fillStyle = logoColor;
+  // Draw Logo Circle Background
   ctx.beginPath();
-  ctx.arc(160, 260, 48, 0, Math.PI * 2);
+  ctx.fillStyle = logoColor;
+  ctx.arc(160, 245, 46, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.font = '900 48px Inter, sans-serif';
-  ctx.fillStyle = '#ffffff';
+  // Logo Border Ring
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.lineWidth = 3;
+  ctx.arc(160, 245, 46, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Logo Letter
   ctx.textAlign = 'center';
-  ctx.fillText(logoChar, 160, 276);
+  ctx.font = '900 46px "Inter", system-ui, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(logoChar, 160, 261);
 
   // Company Name
   ctx.textAlign = 'left';
-  ctx.font = '800 36px Inter, sans-serif';
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-  ctx.fillText(job.company || 'Top Tech Company', 230, 255);
+  ctx.font = '800 36px "Inter", system-ui, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(company, 230, 242);
 
   // Verified Badge
+  ctx.font = '700 20px "Inter", system-ui, sans-serif';
   ctx.fillStyle = '#10b981';
-  ctx.font = '600 20px Inter, sans-serif';
-  ctx.fillText('✓ Verified Hiring', 230, 285);
+  ctx.fillText('✓ Verified Hiring Drive', 230, 275);
 
   // 5. Job Role / Title
-  ctx.font = '900 48px Inter, sans-serif';
-  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 44px "Inter", system-ui, sans-serif';
+  ctx.fillStyle = '#f8fafc';
   
-  // Wrap role title if too long
-  const roleText = job.role || 'Software Engineer';
-  if (roleText.length > 32) {
-    ctx.font = '900 38px Inter, sans-serif';
+  let roleTitle = role;
+  if (roleTitle.length > 32) {
+    ctx.font = '900 36px "Inter", system-ui, sans-serif';
   }
-  ctx.fillText(roleText, 120, 370);
+  ctx.fillText(roleTitle, 120, 360);
 
   // Line Divider
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(120, 410);
-  ctx.lineTo(960, 410);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+  ctx.lineWidth = 2;
+  ctx.moveTo(120, 395);
+  ctx.lineTo(960, 395);
   ctx.stroke();
 
-  // 6. Details Grid (2x2 Boxes)
+  // 6. Details Grid (2x2 Cards with Icons & Typography)
   const gridItems = [
-    { label: '📍 LOCATION', value: job.location || 'Pan India' },
-    { label: '💼 WORK MODE', value: job.type || 'Onsite' },
-    { label: '💰 SALARY PACKAGE', value: job.salary || 'Best in Industry' },
-    { label: '🎯 ELIGIBILITY', value: job.experience || 'Fresher (0-1 yr)' },
+    { icon: '📍', label: 'LOCATION', value: location, color: '#38bdf8' },
+    { icon: '💼', label: 'WORK MODE', value: type, color: '#a78bfa' },
+    { icon: '💰', label: 'SALARY PACKAGE', value: salary, color: '#f43f5e' },
+    { icon: '🎓', label: 'ELIGIBILITY', value: experience, color: '#34d399' },
   ];
 
   gridItems.forEach((item, index) => {
     const col = index % 2;
     const row = Math.floor(index / 2);
-    const x = 120 + col * 420;
-    const y = 440 + row * 125;
+    const x = 120 + col * 430;
+    const y = 425 + row * 135;
+    const boxW = 410;
+    const boxH = 118;
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.roundRect(x, y, 400, 105, 16);
+    // Card Fill
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 1.5;
+    ctx.roundRect(x, y, boxW, boxH, 16);
     ctx.fill();
     ctx.stroke();
 
-    ctx.font = '700 18px Inter, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.fillText(item.label, x + 20, y + 38);
+    // Accent Line on Left of Card
+    ctx.beginPath();
+    ctx.fillStyle = item.color;
+    ctx.roundRect(x, y + 16, 5, boxH - 32, 4);
+    ctx.fill();
 
-    ctx.font = '800 24px Inter, sans-serif';
+    // Icon & Label Header
+    ctx.textAlign = 'left';
+    ctx.font = '800 18px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.fillText(`${item.icon} ${item.label}`, x + 24, y + 42);
+
+    // Value Text
+    ctx.font = '800 24px "Inter", system-ui, sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(item.value, x + 20, y + 76);
+
+    // Truncate long value string if needed
+    let valStr = item.value;
+    if (valStr.length > 24) {
+      ctx.font = '800 20px "Inter", system-ui, sans-serif';
+    }
+    ctx.fillText(valStr, x + 24, y + 84);
   });
 
-  // 7. Tech Stack Pills
-  ctx.font = '700 20px Inter, sans-serif';
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-  ctx.fillText('⚡ TECH STACK & SKILLS:', 120, 725);
+  // 7. Tech Stack Section
+  ctx.textAlign = 'left';
+  ctx.font = '800 20px "Inter", system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+  ctx.fillText('⚡ REQUIRED SKILLS & TECH STACK:', 120, 725);
 
-  const tags = Array.isArray(job.tags) ? job.tags : (job.tags || 'Java, Python, DSA').split(',');
+  const tags = Array.isArray(job.tags) 
+    ? job.tags 
+    : (typeof job.tags === 'string' ? job.tags.split(',') : ['Java', 'Python', 'DSA']);
+
   let tagX = 120;
   const tagY = 750;
 
   tags.slice(0, 5).forEach((t) => {
-    const tagText = t.trim();
+    const tagText = String(t).trim();
     if (!tagText) return;
-    
-    ctx.font = '700 20px Inter, sans-serif';
+
+    ctx.font = '800 20px "Inter", system-ui, sans-serif';
     const textWidth = ctx.measureText(tagText).width;
     const pillWidth = textWidth + 36;
 
-    ctx.fillStyle = 'rgba(108, 60, 252, 0.25)';
-    ctx.strokeStyle = 'rgba(167, 139, 250, 0.4)';
+    // Check bounds
+    if (tagX + pillWidth > 960) return;
+
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(108, 60, 252, 0.3)';
+    ctx.strokeStyle = 'rgba(167, 139, 250, 0.5)';
     ctx.lineWidth = 1.5;
     ctx.roundRect(tagX, tagY, pillWidth, 44, 22);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = '#a78bfa';
+    ctx.fillStyle = '#c084fc';
     ctx.fillText(tagText, tagX + 18, tagY + 29);
 
     tagX += pillWidth + 14;
   });
 
-  // 8. Footer Bar & Call to Action
-  ctx.fillStyle = 'linear-gradient(90deg, #6c3cfc, #e91e8c)';
-  const footerGrad = ctx.createLinearGradient(80, 945, 1000, 945);
+  // 8. Bottom CTA Banner
+  ctx.beginPath();
+  const footerGrad = ctx.createLinearGradient(80, 940, 1000, 940);
   footerGrad.addColorStop(0, '#6c3cfc');
   footerGrad.addColorStop(1, '#e91e8c');
   ctx.fillStyle = footerGrad;
   ctx.roundRect(80, 935, 920, 75, 20);
   ctx.fill();
 
-  ctx.font = '900 26px Inter, sans-serif';
-  ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'center';
-  ctx.fillText('👉 LINK IN BIO TO APPLY • fresherplacement.com', 540, 982);
+  ctx.textBaseline = 'middle';
+  ctx.font = '900 26px "Inter", system-ui, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('👉 LINK IN BIO TO APPLY • fresherplacement.com', 540, 972.5);
+
+  ctx.restore();
 
   // Return Data URL and Blob
   const dataUrl = canvas.toDataURL('image/png');
