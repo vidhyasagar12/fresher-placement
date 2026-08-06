@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../supabase';
+import { publishToInstagram } from '../../../services/instagram';
+import { generateJobPoster } from '../../../utils/generateJobPoster';
+import { generateSeoCaption } from '../../../utils/generateSeoCaption';
 
 const EMPTY_JOB = {
   company: '', logo: '', logo_color: '#6c3cfc', role: '', location: '',
   type: 'Onsite', experience: 'Fresher', salary: '', tags: '',
   posted: 'Just now', apply_link: '', description: '', requirements: '',
+  auto_post_ig: true,
 };
 
 function Toast({ msg, type }) {
@@ -19,11 +23,21 @@ export default function AdminJobs() {
   const [form, setForm] = useState(EMPTY_JOB);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [autoPostIg, setAutoPostIg] = useState(true);
   const [toast, setToast] = useState({ msg: '', type: 'success' });
+
+  // Preview Modal state
+  const [preview, setPreview] = useState({
+    show: false,
+    dataUrl: '',
+    caption: '',
+    altText: '',
+    job: null,
+  });
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
-    setTimeout(() => setToast({ msg: '', type: 'success' }), 3000);
+    setTimeout(() => setToast({ msg: '', type: 'success' }), 4000);
   };
 
   const loadJobs = useCallback(async () => {
@@ -35,7 +49,7 @@ export default function AdminJobs() {
 
   useEffect(() => { loadJobs(); }, [loadJobs]);
 
-  const openAdd = () => { setForm(EMPTY_JOB); setEditId(null); setShowForm(true); };
+  const openAdd = () => { setForm(EMPTY_JOB); setEditId(null); setAutoPostIg(true); setShowForm(true); };
   const openEdit = (job) => {
     setForm({
       ...job,
@@ -43,6 +57,7 @@ export default function AdminJobs() {
       requirements: (job.requirements || []).join('\n'),
     });
     setEditId(job.id);
+    setAutoPostIg(false);
     setShowForm(true);
   };
 
@@ -51,27 +66,51 @@ export default function AdminJobs() {
     setSaving(true);
     const payload = {
       ...form,
-      tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
-      requirements: form.requirements.split('\n').map(r => r.trim()).filter(Boolean),
+      tags: typeof form.tags === 'string' ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : form.tags,
+      requirements: typeof form.requirements === 'string' ? form.requirements.split('\n').map(r => r.trim()).filter(Boolean) : form.requirements,
     };
     delete payload.id;
     delete payload.created_at;
+    delete payload.auto_post_ig;
 
     let error;
+    let savedJobId = editId;
+
     if (editId) {
       ({ error } = await supabase.from('jobs').update(payload).eq('id', editId));
     } else {
-      ({ error } = await supabase.from('jobs').insert([payload]));
+      const { data: insertedData, error: insErr } = await supabase.from('jobs').insert([payload]).select();
+      error = insErr;
+      if (insertedData?.[0]) savedJobId = insertedData[0].id;
+    }
+
+    if (error) {
+      setSaving(false);
+      showToast('Error: ' + error.message, 'error');
+      return;
+    }
+
+    // Trigger Instagram Auto-Post if checked
+    if (autoPostIg) {
+      showToast('🚀 Job saved! Publishing to Instagram...');
+      try {
+        const igResult = await publishToInstagram({ ...payload, id: savedJobId });
+        showToast(igResult.message, igResult.published ? 'success' : 'info');
+
+        if (savedJobId) {
+          await supabase.from('jobs').update({ instagram_posted: true }).eq('id', savedJobId);
+        }
+      } catch (igErr) {
+        console.error('Instagram post error:', igErr);
+        showToast('Job saved, but Instagram post failed: ' + igErr.message, 'error');
+      }
+    } else {
+      showToast(editId ? 'Job updated!' : 'Job posted successfully!');
     }
 
     setSaving(false);
-    if (error) {
-      showToast('Error: ' + error.message, 'error');
-    } else {
-      showToast(editId ? 'Job updated!' : 'Job posted!');
-      setShowForm(false);
-      loadJobs();
-    }
+    setShowForm(false);
+    loadJobs();
   };
 
   const handleDelete = async (id) => {
@@ -81,6 +120,38 @@ export default function AdminJobs() {
     else { showToast('Job deleted'); loadJobs(); }
   };
 
+  const handlePreviewPoster = async (jobData) => {
+    const targetJob = jobData || {
+      ...form,
+      tags: typeof form.tags === 'string' ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : form.tags,
+      requirements: typeof form.requirements === 'string' ? form.requirements.split('\n').map(r => r.trim()).filter(Boolean) : form.requirements,
+    };
+
+    const { dataUrl } = await generateJobPoster(targetJob);
+    const seo = generateSeoCaption(targetJob);
+
+    setPreview({
+      show: true,
+      dataUrl,
+      caption: seo.caption,
+      altText: seo.altText,
+      job: targetJob,
+    });
+  };
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    showToast(`📋 Copied ${label} to clipboard!`);
+  };
+
+  const downloadPoster = () => {
+    const a = document.createElement('a');
+    a.href = preview.dataUrl;
+    a.download = `Instagram-Poster-${(preview.job?.company || 'job').replace(/\s+/g, '-')}.png`;
+    a.click();
+    showToast('💾 Poster image downloaded!');
+  };
+
   const F = (key) => ({ value: form[key], onChange: e => setForm(f => ({ ...f, [key]: e.target.value })) });
 
   return (
@@ -88,7 +159,7 @@ export default function AdminJobs() {
       <Toast msg={toast.msg} type={toast.type} />
 
       <div className="admin-section-header">
-        <h2>💼 Job Listings</h2>
+        <h2>💼 Job Listings &amp; Instagram Publisher</h2>
         <button className="admin-btn-primary" onClick={openAdd}>➕ Post New Job</button>
       </div>
 
@@ -106,7 +177,7 @@ export default function AdminJobs() {
                 <th>Location</th>
                 <th>Type</th>
                 <th>Salary</th>
-                <th>Tags</th>
+                <th>Instagram Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -119,9 +190,17 @@ export default function AdminJobs() {
                   <td>{job.type}</td>
                   <td>{job.salary}</td>
                   <td>
-                    <div className="admin-tags">
-                      {(job.tags || []).slice(0, 3).map(t => <span key={t} className="admin-tag">{t}</span>)}
-                    </div>
+                    {job.instagram_posted ? (
+                      <span className="admin-tag" style={{ background: 'rgba(16,185,129,0.2)', color: '#6ee7b7' }}>📸 Posted</span>
+                    ) : (
+                      <button
+                        className="admin-btn-edit"
+                        style={{ fontSize: 11, padding: '3px 8px' }}
+                        onClick={() => handlePreviewPoster(job)}
+                      >
+                        📱 Generate IG Poster
+                      </button>
+                    )}
                   </td>
                   <td>
                     <div className="actions">
@@ -136,11 +215,12 @@ export default function AdminJobs() {
         </div>
       )}
 
+      {/* Form Modal */}
       {showForm && (
         <div className="admin-modal-overlay" onClick={e => e.target === e.currentTarget && setShowForm(false)}>
           <div className="admin-modal">
             <div className="admin-modal-header">
-              <h3>{editId ? '✏️ Edit Job' : '➕ Post New Job'}</h3>
+              <h3>{editId ? '✏️ Edit Job' : '➕ Post New Job & Instagram Graphic'}</h3>
               <button className="admin-modal-close" onClick={() => setShowForm(false)}>✕</button>
             </div>
             <form className="admin-form" onSubmit={handleSave}>
@@ -193,7 +273,7 @@ export default function AdminJobs() {
                 </div>
               </div>
               <div className="admin-form-group">
-                <label>Tags (comma-separated)</label>
+                <label>Tags (comma-separated for SEO &amp; Hashtags)</label>
                 <input placeholder="Java, Python, React" {...F('tags')} />
               </div>
               <div className="admin-form-group">
@@ -202,19 +282,131 @@ export default function AdminJobs() {
               </div>
               <div className="admin-form-group">
                 <label>Job Description</label>
-                <textarea rows={4} placeholder="Describe the role..." {...F('description')} />
+                <textarea rows={3} placeholder="Describe the role..." {...F('description')} />
               </div>
               <div className="admin-form-group">
                 <label>Requirements (one per line)</label>
-                <textarea rows={5} placeholder="B.E/B.Tech in CS&#10;Strong in DSA&#10;..." {...F('requirements')} />
+                <textarea rows={4} placeholder="B.E/B.Tech in CS&#10;Strong in DSA&#10;..." {...F('requirements')} />
               </div>
+
+              {/* Instagram Auto-Post Checkbox & Preview */}
+              <div style={{ background: 'rgba(108,60,252,0.15)', border: '1px solid rgba(108,60,252,0.3)', borderRadius: 12, padding: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textTransform: 'none', fontSize: 14, color: '#fff' }}>
+                    <input
+                      type="checkbox"
+                      checked={autoPostIg}
+                      onChange={e => setAutoPostIg(e.target.checked)}
+                      style={{ width: 18, height: 18, accentColor: '#6c3cfc' }}
+                    />
+                    <span>📸 <strong>Auto-Post to Instagram</strong> (Generate 1080x1080 Poster &amp; SEO Caption)</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="admin-btn-edit"
+                    style={{ fontSize: 12, padding: '6px 12px' }}
+                    onClick={() => handlePreviewPoster()}
+                  >
+                    👁️ Preview Poster &amp; SEO
+                  </button>
+                </div>
+              </div>
+
               <div className="admin-form-actions">
                 <button type="button" className="admin-btn-cancel" onClick={() => setShowForm(false)}>Cancel</button>
                 <button type="submit" className="admin-btn-primary" disabled={saving}>
-                  {saving ? 'Saving...' : editId ? '💾 Update Job' : '🚀 Post Job'}
+                  {saving ? 'Saving & Publishing...' : editId ? '💾 Update Job' : '🚀 Post Job & Publish'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Instagram Poster & SEO Caption Preview Modal */}
+      {preview.show && (
+        <div className="admin-modal-overlay" onClick={e => e.target === e.currentTarget && setPreview({ show: false, dataUrl: '', caption: '', altText: '', job: null })}>
+          <div className="admin-modal" style={{ maxWidth: 880 }}>
+            <div className="admin-modal-header">
+              <h3>📸 Instagram Poster &amp; SEO Caption Preview</h3>
+              <button className="admin-modal-close" onClick={() => setPreview({ show: false, dataUrl: '', caption: '', altText: '', job: null })}>✕</button>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24 }}>
+              {/* Graphic Poster Image */}
+              <div style={{ textAlign: 'center' }}>
+                <img
+                  src={preview.dataUrl}
+                  alt="Generated Instagram Poster"
+                  style={{ width: '100%', borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
+                />
+                <button
+                  type="button"
+                  className="admin-btn-primary"
+                  style={{ width: '100%', justifyContent: 'center', marginTop: 14 }}
+                  onClick={downloadPoster}
+                >
+                  💾 Download 1080x1080 PNG
+                </button>
+              </div>
+
+              {/* SEO Caption & Alt Text */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: 13, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase' }}>
+                    🔥 SEO Optimized Caption &amp; Hashtags
+                  </label>
+                  <button
+                    type="button"
+                    className="admin-btn-edit"
+                    style={{ fontSize: 12 }}
+                    onClick={() => copyToClipboard(preview.caption, 'SEO Caption')}
+                  >
+                    📋 Copy Caption
+                  </button>
+                </div>
+                <textarea
+                  rows={12}
+                  readOnly
+                  value={preview.caption}
+                  style={{
+                    background: 'rgba(0,0,0,0.4)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 10,
+                    color: '#e2e8f0',
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    padding: 12,
+                  }}
+                />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
+                    ♿ Instagram Accessibility Alt-Text (Algorithm Indexing)
+                  </label>
+                  <button
+                    type="button"
+                    className="admin-btn-edit"
+                    style={{ fontSize: 11, padding: '2px 8px' }}
+                    onClick={() => copyToClipboard(preview.altText, 'Alt Text')}
+                  >
+                    📋 Copy Alt Text
+                  </button>
+                </div>
+                <input
+                  readOnly
+                  value={preview.altText}
+                  style={{
+                    background: 'rgba(0,0,0,0.4)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 8,
+                    color: 'rgba(255,255,255,0.7)',
+                    fontSize: 12,
+                    padding: '8px 12px',
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}
