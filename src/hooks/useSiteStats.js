@@ -61,8 +61,8 @@ export function useSiteStats() {
 
             // Match pattern like "10.5k Followers", "10,500 Followers", or "edge_followed_by":{"count":10500}
             const matchCount = html.match(/"edge_followed_by":\s*\{\s*"count":\s*(\d+)/i) ||
-                               html.match(/(\d[\d,\.]*\s*[KMBkmb]?)\s+Followers/i) ||
-                               html.match(/content="(\d[\d,\.]*\s*[KMBkmb]?)\s+Followers/i);
+                               html.match(/(\d[\d,.]*\s*[KMBkmb]?)\s+Followers/i) ||
+                               html.match(/content="(\d[\d,.]*\s*[KMBkmb]?)\s+Followers/i);
 
             if (matchCount && matchCount[1]) {
               const rawVal = matchCount[1].replace(/,/g, '').trim();

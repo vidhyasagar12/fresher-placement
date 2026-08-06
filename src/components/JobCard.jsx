@@ -7,12 +7,6 @@ const typeColors = {
   Onsite: { bg: '#fce7f3', color: '#9d174d' },
 };
 
-const difficultyColors = {
-  Easy: '#10b981',
-  Medium: '#f59e0b',
-  Hard: '#ef4444',
-};
-
 export default function JobCard({ job }) {
   const [expanded, setExpanded] = useState(false);
   const typeStyle = typeColors[job.type] || typeColors.Onsite;

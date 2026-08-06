@@ -5,7 +5,6 @@ import { blogs as staticBlogs } from '../../../data/blogs';
 import { interviewCategories as staticCats } from '../../../data/interviewPrep';
 
 export default function AdminSeed({ onSeedDone }) {
-  const [status, setStatus] = useState('');
   const [log, setLog] = useState([]);
   const [seeding, setSeeding] = useState(false);
   const [done, setDone] = useState(false);
@@ -16,7 +15,6 @@ export default function AdminSeed({ onSeedDone }) {
     if (!confirm('This will INSERT all static data into Supabase. Duplicate entries may occur if run more than once. Continue?')) return;
     setSeeding(true);
     setLog([]);
-    setStatus('running');
 
     // ── Seed Jobs ──
     addLog('🌱 Seeding jobs...');
