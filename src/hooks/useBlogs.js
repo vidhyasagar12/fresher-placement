@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { autoSeedIfEmpty, smartSeedAll } from '../utils/autoSeed';
 
 export function useBlogs() {
   const [blogs, setBlogs] = useState([]);
@@ -9,6 +10,10 @@ export function useBlogs() {
   useEffect(() => {
     async function fetchBlogs() {
       setLoading(true);
+
+      // Auto-seed if blogs table is empty
+      await autoSeedIfEmpty('blogs', smartSeedAll);
+
       const { data, error } = await supabase
         .from('blogs')
         .select('*')

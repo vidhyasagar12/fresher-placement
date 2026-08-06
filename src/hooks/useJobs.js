@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { autoSeedIfEmpty, smartSeedAll } from '../utils/autoSeed';
 
 export function useJobs() {
   const [jobs, setJobs] = useState([]);
@@ -9,6 +10,10 @@ export function useJobs() {
   useEffect(() => {
     async function fetchJobs() {
       setLoading(true);
+      
+      // Auto-seed initial data if Supabase jobs table is empty
+      await autoSeedIfEmpty('jobs', smartSeedAll);
+
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
