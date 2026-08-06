@@ -1,0 +1,40 @@
+.blog-hero {
+  padding: 80px 0 48px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+
+.blog-search {
+  margin-top: 28px;
+  max-width: 480px;
+  width: 100%;
+  padding: 14px 20px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: var(--font);
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+  transition: var(--transition);
+}
+
+.blog-search:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(108,60,252,0.1);
+}
+
+.blog-filters {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 0;
+  position: sticky;
+  top: var(--nav-height);
+  z-index: 10;
+}
+
+.blog-filter-inner {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
