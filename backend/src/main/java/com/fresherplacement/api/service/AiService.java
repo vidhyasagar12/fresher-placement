@@ -26,9 +26,16 @@ public class AiService {
         """;
 
     public Map<String, Object> generateCareerTip(AiChatRequestDto requestDto) {
+        if (openRouterApiKey == null || openRouterApiKey.isBlank() || openRouterApiKey.contains("placeholder")) {
+            Map<String, Object> errRes = new HashMap<>();
+            errRes.put("success", false);
+            errRes.put("error", "AI Assistant key not configured. Please add VITE_OPENROUTER_API_KEY environment variable in your Render dashboard.");
+            return errRes;
+        }
+
         RestClient restClient = RestClient.builder()
                 .baseUrl(openRouterBaseUrl)
-                .defaultHeader("Authorization", "Bearer " + openRouterApiKey)
+                .defaultHeader("Authorization", "Bearer " + openRouterApiKey.trim())
                 .defaultHeader("HTTP-Referer", "https://fresherplacement.com")
                 .defaultHeader("X-Title", "FresherPlacement Java Backend")
                 .build();
