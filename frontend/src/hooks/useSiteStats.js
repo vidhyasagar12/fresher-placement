@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { jobs as staticJobs } from '../data/jobs';
-import { interviewCategories as staticCats } from '../data/interviewPrep';
 
 function formatNumber(num, suffixPlus = true) {
   if (num === null || num === undefined || isNaN(num)) return '0';
@@ -17,16 +15,12 @@ function formatNumber(num, suffixPlus = true) {
 }
 
 export function useSiteStats() {
-  const staticJobsCount = staticJobs.length;
-  const staticCompaniesCount = new Set(staticJobs.map(j => j.company?.trim().toLowerCase()).filter(Boolean)).size;
-  const staticTopicsCount = staticCats.reduce((acc, cat) => acc + (cat.topics?.length || 0), 0);
-
   const [stats, setStats] = useState({
-    jobsCount: formatNumber(staticJobsCount),
-    companiesCount: formatNumber(staticCompaniesCount),
-    topicsCount: formatNumber(staticTopicsCount),
+    jobsCount: '0',
+    companiesCount: '0',
+    topicsCount: '0',
     followersCount: '10K+',
-    loading: false,
+    loading: true,
   });
 
   useEffect(() => {
@@ -36,24 +30,27 @@ export function useSiteStats() {
         const res = await fetch(`${baseUrl}/api/v1/jobs`);
         if (res.ok) {
           const jobsData = await res.json();
-          if (Array.isArray(jobsData) && jobsData.length > 0) {
+          if (Array.isArray(jobsData)) {
             const dbJobsTotal = jobsData.length;
             const dbCompanies = new Set(jobsData.map(j => j.company?.trim().toLowerCase()).filter(Boolean)).size;
 
-            setStats(prev => ({
-              ...prev,
-              jobsCount: formatNumber(Math.max(dbJobsTotal, staticJobsCount)),
-              companiesCount: formatNumber(Math.max(dbCompanies, staticCompaniesCount)),
-            }));
+            setStats({
+              jobsCount: formatNumber(dbJobsTotal),
+              companiesCount: formatNumber(dbCompanies),
+              topicsCount: '50+',
+              followersCount: '10K+',
+              loading: false,
+            });
           }
         }
       } catch (err) {
         console.warn('Error loading dynamic stats:', err.message);
+        setStats(prev => ({ ...prev, loading: false }));
       }
     }
 
     loadStats();
-  }, [staticCompaniesCount, staticJobsCount]);
+  }, []);
 
   return stats;
 }

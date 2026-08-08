@@ -6,9 +6,6 @@ import AdminInterviewPrep from './sections/AdminInterviewPrep';
 import AdminQuestions from './sections/AdminQuestions';
 import AdminSeed from './sections/AdminSeed';
 import './AdminDashboard.css';
-import { jobs as staticJobs } from '../../data/jobs';
-import { blogs as staticBlogs } from '../../data/blogs';
-import { interviewCategories as staticCats } from '../../data/interviewPrep';
 
 const NAV = [
   { id: 'overview', icon: '📊', label: 'Overview' },
@@ -27,12 +24,16 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function loadStats() {
-      setStats({
-        jobs: staticJobs.length,
-        blogs: staticBlogs.length,
-        topics: staticCats.reduce((acc, c) => acc + (c.topics?.length || 0), 0),
-        questions: 0,
-      });
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+        const res = await fetch(`${baseUrl}/api/v1/jobs`);
+        if (res.ok) {
+          const jobsData = await res.json();
+          setStats(prev => ({ ...prev, jobs: Array.isArray(jobsData) ? jobsData.length : 0 }));
+        }
+      } catch {
+        // Fallback
+      }
     }
     loadStats();
   }, [active]);

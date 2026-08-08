@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { jobs as staticJobs } from '../data/jobs';
-import { generateJobFingerprint } from '../utils/cleanDuplicates';
 
 export function useJobs() {
   const [jobs, setJobs] = useState([]);
@@ -10,25 +8,20 @@ export function useJobs() {
   useEffect(() => {
     async function fetchJobs() {
       setLoading(true);
+      setError(null);
       try {
         const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
         const res = await fetch(`${baseUrl}/api/v1/jobs`);
         if (res.ok) {
           const data = await res.json();
-          const seen = new Set();
-          const uniqueJobs = (data || []).filter(job => {
-            const fp = generateJobFingerprint(job);
-            if (seen.has(fp)) return false;
-            seen.add(fp);
-            return true;
-          });
-          setJobs(uniqueJobs.length > 0 ? uniqueJobs : staticJobs);
+          setJobs(data || []);
         } else {
-          setJobs(staticJobs);
+          setError(`Database API returned status ${res.status}`);
+          setJobs([]);
         }
       } catch (err) {
-        console.warn('Backend API unreachable, using static fallback:', err.message);
-        setJobs(staticJobs);
+        setError(`Database connection failed: ${err.message}`);
+        setJobs([]);
       } finally {
         setLoading(false);
       }

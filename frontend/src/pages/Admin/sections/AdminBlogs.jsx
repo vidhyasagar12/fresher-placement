@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { blogs as staticBlogs } from '../../../data/blogs';
 
 const CATEGORIES = ['Career Advice', 'Company Guides', 'Resume Tips', 'Tech Skills'];
 
@@ -34,8 +33,20 @@ export default function AdminBlogs() {
 
   const loadBlogs = useCallback(async () => {
     setLoading(true);
-    setBlogs(staticBlogs);
-    setLoading(false);
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const res = await fetch(`${baseUrl}/api/v1/blogs`);
+      if (res.ok) {
+        const data = await res.json();
+        setBlogs(data || []);
+      } else {
+        setBlogs([]);
+      }
+    } catch {
+      setBlogs([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { loadBlogs(); }, [loadBlogs]);

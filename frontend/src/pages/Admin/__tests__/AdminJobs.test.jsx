@@ -8,6 +8,12 @@ import * as cleanDuplicatesModule from '../../../utils/cleanDuplicates';
 describe('AdminJobs Component & Deduplication UI', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { id: 1, company: 'Google', role: 'Associate Software Engineer', location: 'Bangalore', type: 'ONSITE', salary: '12 LPA', experience: 'Fresher', posted: 'Just now' }
+      ]
+    });
   });
 
   it('renders AdminJobs section header and Clean Duplicates button', async () => {

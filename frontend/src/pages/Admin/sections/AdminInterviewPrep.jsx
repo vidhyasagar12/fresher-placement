@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { interviewCategories as staticCats } from '../../../data/interviewPrep';
 
 const EMPTY_CAT = { id: '', label: '', icon: '📚', color: '#6c3cfc' };
 const EMPTY_TOPIC = { title: '', difficulty: 'Easy', time: '2 hrs', description: '' };
@@ -35,8 +34,20 @@ export default function AdminInterviewPrep() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    setCategories(staticCats || []);
-    setLoading(false);
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const res = await fetch(`${baseUrl}/api/v1/interview-prep`);
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data || []);
+      } else {
+        setCategories([]);
+      }
+    } catch {
+      setCategories([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);

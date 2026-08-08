@@ -4,7 +4,6 @@ import { generateJobPoster } from '../../../utils/generateJobPoster';
 import { generateSeoCaption } from '../../../utils/generateSeoCaption';
 import { formatPostedTime } from '../../../utils/formatTime';
 import { cleanDuplicateJobs, generateJobFingerprint } from '../../../utils/cleanDuplicates';
-import { jobs as staticJobs } from '../../../data/jobs';
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -51,12 +50,12 @@ export default function AdminJobs() {
       const res = await fetch(`${baseUrl}/api/v1/jobs`);
       if (res.ok) {
         const data = await res.json();
-        setJobs(data && data.length > 0 ? data : staticJobs);
+        setJobs(data || []);
       } else {
-        setJobs(staticJobs);
+        setJobs([]);
       }
     } catch {
-      setJobs(staticJobs);
+      setJobs([]);
     } finally {
       setLoading(false);
     }
