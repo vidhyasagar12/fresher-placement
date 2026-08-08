@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { jobs as staticJobs } from '../data/jobs';
+import { interviewCategories as staticCats } from '../data/interviewPrep';
 
 function formatNumber(num, suffixPlus = true) {
   if (num === null || num === undefined || isNaN(num)) return '0';
@@ -16,12 +18,16 @@ function formatNumber(num, suffixPlus = true) {
 }
 
 export function useSiteStats() {
+  const staticJobsCount = staticJobs.length;
+  const staticCompaniesCount = new Set(staticJobs.map(j => j.company?.trim().toLowerCase()).filter(Boolean)).size;
+  const staticTopicsCount = staticCats.reduce((acc, cat) => acc + (cat.topics?.length || 0), 0);
+
   const [stats, setStats] = useState({
-    jobsCount: '...',
-    companiesCount: '...',
-    topicsCount: '...',
+    jobsCount: formatNumber(staticJobsCount),
+    companiesCount: formatNumber(staticCompaniesCount),
+    topicsCount: formatNumber(staticTopicsCount),
     followersCount: '10K+',
-    loading: true,
+    loading: false,
   });
 
   useEffect(() => {
@@ -32,8 +38,8 @@ export function useSiteStats() {
           .from('jobs')
           .select('company');
 
-        const jobsTotal = jobsData ? jobsData.length : 0;
-        const uniqueCompanies = jobsData
+        const dbJobsTotal = jobsData ? jobsData.length : 0;
+        const dbCompanies = jobsData
           ? new Set(jobsData.map(j => j.company?.trim().toLowerCase()).filter(Boolean)).size
           : 0;
 
@@ -42,53 +48,19 @@ export function useSiteStats() {
           .from('interview_topics')
           .select('*', { count: 'exact', head: true });
 
-        // 3. Try fetching dynamic Instagram followers count with fallbacks
-        let followersText = '10K+';
-        try {
-          // Attempt 1: fetch from Instagram via CORS proxy
-          const targetUrl = 'https://www.instagram.com/fresherplacement/';
-          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-          
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s timeout
+        const finalJobs = Math.max(dbJobsTotal, staticJobsCount);
+        const finalCompanies = Math.max(dbCompanies, staticCompaniesCount);
+        const finalTopics = Math.max(topicsTotal || 0, staticTopicsCount);
 
-          const res = await fetch(proxyUrl, { signal: controller.signal });
-          clearTimeout(timeoutId);
-
-          if (res.ok) {
-            const data = await res.json();
-            const html = data.contents || '';
-
-            // Match pattern like "10.5k Followers", "10,500 Followers", or "edge_followed_by":{"count":10500}
-            const matchCount = html.match(/"edge_followed_by":\s*\{\s*"count":\s*(\d+)/i) ||
-                               html.match(/(\d[\d,.]*\s*[KMBkmb]?)\s+Followers/i) ||
-                               html.match(/content="(\d[\d,.]*\s*[KMBkmb]?)\s+Followers/i);
-
-            if (matchCount && matchCount[1]) {
-              const rawVal = matchCount[1].replace(/,/g, '').trim();
-              if (!isNaN(rawVal)) {
-                followersText = formatNumber(parseInt(rawVal, 10));
-              } else {
-                followersText = rawVal.toUpperCase();
-                if (!followersText.includes('+')) followersText += '+';
-              }
-            }
-          }
-        } catch {
-          // Fallback to default if Instagram blocks CORS or times out
-          followersText = '10K+';
-        }
-
-        setStats({
-          jobsCount: formatNumber(jobsTotal),
-          companiesCount: formatNumber(uniqueCompanies),
-          topicsCount: formatNumber(topicsTotal || 0),
-          followersCount: followersText,
+        setStats(prev => ({
+          ...prev,
+          jobsCount: formatNumber(finalJobs),
+          companiesCount: formatNumber(finalCompanies),
+          topicsCount: formatNumber(finalTopics),
           loading: false,
-        });
+        }));
       } catch (err) {
-        console.error('Error loading dynamic stats:', err);
-        setStats(prev => ({ ...prev, loading: false }));
+        console.warn('Error loading dynamic stats, using fallback:', err);
       }
     }
 
