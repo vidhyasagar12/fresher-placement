@@ -2,6 +2,8 @@ import { supabase } from '../supabase';
 import { jobs as staticJobs } from '../data/jobs';
 import { blogs as staticBlogs } from '../data/blogs';
 import { interviewCategories as staticCats } from '../data/interviewPrep';
+import { parseRelativeTimeToIso } from './formatTime';
+import { generateJobFingerprint } from './cleanDuplicates';
 
 /**
  * Smart Deduplicated Seeding Engine
@@ -17,14 +19,14 @@ export async function smartSeedAll(logCallback = () => {}) {
   try {
     // 1. Jobs Deduplication Check
     addLog('🔍 Checking jobs table for duplicates...', 'info');
-    const { data: existingJobs } = await supabase.from('jobs').select('company, role');
-    const existingJobSet = new Set(
-      (existingJobs || []).map(j => `${(j.company || '').toLowerCase().trim()}|${(j.role || '').toLowerCase().trim()}`)
+    const { data: existingJobs } = await supabase.from('jobs').select('*');
+    const existingJobFingerprints = new Set(
+      (existingJobs || []).map(j => generateJobFingerprint(j))
     );
 
     const newJobs = staticJobs.filter(j => {
-      const key = `${(j.company || '').toLowerCase().trim()}|${(j.role || '').toLowerCase().trim()}`;
-      return !existingJobSet.has(key);
+      const fp = generateJobFingerprint(j);
+      return !existingJobFingerprints.has(fp);
     }).map(j => ({
       company: j.company,
       logo: j.logo,
@@ -39,6 +41,7 @@ export async function smartSeedAll(logCallback = () => {}) {
       apply_link: j.applyLink,
       description: j.description,
       requirements: j.requirements,
+      created_at: parseRelativeTimeToIso(j.posted),
     }));
 
     if (newJobs.length > 0) {

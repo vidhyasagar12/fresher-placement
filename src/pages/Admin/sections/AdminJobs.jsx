@@ -3,6 +3,8 @@ import { supabase } from '../../../supabase';
 import { publishToInstagram } from '../../../services/instagram';
 import { generateJobPoster } from '../../../utils/generateJobPoster';
 import { generateSeoCaption } from '../../../utils/generateSeoCaption';
+import { formatPostedTime } from '../../../utils/formatTime';
+import { cleanDuplicateJobs, generateJobFingerprint } from '../../../utils/cleanDuplicates';
 
 const EMPTY_JOB = {
   company: '', logo: '', logo_color: '#6c3cfc', role: '', location: '',
@@ -23,6 +25,7 @@ export default function AdminJobs() {
   const [form, setForm] = useState(EMPTY_JOB);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [autoPostIg, setAutoPostIg] = useState(true);
   const [toast, setToast] = useState({ msg: '', type: 'success' });
 
@@ -53,6 +56,7 @@ export default function AdminJobs() {
   const openEdit = (job) => {
     setForm({
       ...job,
+      apply_link: job.apply_link || job.applyLink || '',
       tags: (job.tags || []).join(', '),
       requirements: (job.requirements || []).join('\n'),
     });
@@ -61,11 +65,38 @@ export default function AdminJobs() {
     setShowForm(true);
   };
 
+  const handleCleanDuplicates = async () => {
+    if (!confirm('Scan database and purge duplicate job entries matching company, role, location, salary & description?')) return;
+    setCleaning(true);
+    showToast('🔍 Scanning database for duplicate jobs...');
+    const result = await cleanDuplicateJobs((msg, type) => {
+      console.log(`[Duplicate Cleanup] ${msg}`);
+    });
+    setCleaning(false);
+    if (result.success) {
+      if (result.removedCount > 0) {
+        showToast(`🧹 Purged ${result.removedCount} duplicate entries! ${result.uniqueCount} unique jobs remaining.`, 'success');
+      } else {
+        showToast(`✅ No duplicate jobs found. Database is clean (${result.uniqueCount} jobs).`, 'info');
+      }
+      loadJobs();
+    } else {
+      showToast(`❌ Cleanup error: ${result.error}`, 'error');
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
+
+    let formattedApplyLink = form.apply_link ? form.apply_link.trim() : '';
+    if (formattedApplyLink && !/^https?:\/\//i.test(formattedApplyLink)) {
+      formattedApplyLink = `https://${formattedApplyLink}`;
+    }
+
     const payload = {
       ...form,
+      apply_link: formattedApplyLink,
       tags: typeof form.tags === 'string' ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : form.tags,
       requirements: typeof form.requirements === 'string' ? form.requirements.split('\n').map(r => r.trim()).filter(Boolean) : form.requirements,
     };
@@ -76,8 +107,32 @@ export default function AdminJobs() {
     let error;
     let savedJobId = editId;
 
-    if (editId) {
-      ({ error } = await supabase.from('jobs').update(payload).eq('id', editId));
+    // Duplicate parameter validation (matching company, role, location, salary, experience & description)
+    if (!editId) {
+      const newFp = generateJobFingerprint(payload);
+      const duplicateMatch = jobs.find(existing => generateJobFingerprint(existing) === newFp);
+
+      if (duplicateMatch) {
+        const confirmUpdate = window.confirm(
+          `⚠️ Duplicate Job Listing Detected!\n\nA job listing with matching parameters already exists:\n` +
+          `• Company: ${payload.company}\n` +
+          `• Role: ${payload.role}\n` +
+          `• Location: ${payload.location}\n` +
+          `• Salary: ${payload.salary}\n\n` +
+          `Would you like to UPDATE the existing job listing instead of creating a duplicate entry?`
+        );
+        if (confirmUpdate) {
+          savedJobId = duplicateMatch.id;
+        } else {
+          setSaving(false);
+          showToast('Job posting cancelled to prevent duplicate entry.', 'info');
+          return;
+        }
+      }
+    }
+
+    if (savedJobId) {
+      ({ error } = await supabase.from('jobs').update(payload).eq('id', savedJobId));
     } else {
       const { data: insertedData, error: insErr } = await supabase.from('jobs').insert([payload]).select();
       error = insErr;
@@ -160,7 +215,17 @@ export default function AdminJobs() {
 
       <div className="admin-section-header">
         <h2>💼 Job Listings &amp; Instagram Publisher</h2>
-        <button className="admin-btn-primary" onClick={openAdd}>➕ Post New Job</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            type="button"
+            className="admin-btn-edit"
+            onClick={handleCleanDuplicates}
+            disabled={cleaning}
+          >
+            {cleaning ? '⏳ Cleaning...' : '🧹 Clean Duplicates'}
+          </button>
+          <button className="admin-btn-primary" onClick={openAdd}>➕ Post New Job</button>
+        </div>
       </div>
 
       {loading ? (
@@ -177,6 +242,7 @@ export default function AdminJobs() {
                 <th>Location</th>
                 <th>Type</th>
                 <th>Salary</th>
+                <th>Posted</th>
                 <th>Instagram Status</th>
                 <th>Actions</th>
               </tr>
@@ -189,6 +255,7 @@ export default function AdminJobs() {
                   <td>{job.location}</td>
                   <td>{job.type}</td>
                   <td>{job.salary}</td>
+                  <td><span style={{ fontSize: 12, opacity: 0.85 }}>🕐 {formatPostedTime(job.created_at, job.posted)}</span></td>
                   <td>
                     {job.instagram_posted ? (
                       <span className="admin-tag" style={{ background: 'rgba(16,185,129,0.2)', color: '#6ee7b7' }}>📸 Posted</span>

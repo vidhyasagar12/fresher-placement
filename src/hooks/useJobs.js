@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { autoSeedIfEmpty, smartSeedAll } from '../utils/autoSeed';
+import { generateJobFingerprint } from '../utils/cleanDuplicates';
 
 export function useJobs() {
   const [jobs, setJobs] = useState([]);
@@ -22,7 +23,15 @@ export function useJobs() {
       if (error) {
         setError(error.message);
       } else {
-        setJobs(data || []);
+        // Client-side deduplication safeguard
+        const seen = new Set();
+        const uniqueJobs = (data || []).filter(job => {
+          const fp = generateJobFingerprint(job);
+          if (seen.has(fp)) return false;
+          seen.add(fp);
+          return true;
+        });
+        setJobs(uniqueJobs);
       }
       setLoading(false);
     }

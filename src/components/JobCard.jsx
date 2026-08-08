@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatPostedTime } from '../utils/formatTime';
 import './JobCard.css';
 
 const typeColors = {
@@ -10,6 +11,27 @@ const typeColors = {
 export default function JobCard({ job }) {
   const [expanded, setExpanded] = useState(false);
   const typeStyle = typeColors[job.type] || typeColors.Onsite;
+  const postedDisplay = formatPostedTime(job?.created_at, job?.posted || 'Just now');
+
+  const rawLink = job?.apply_link || job?.applyLink || '';
+  const getFormattedUrl = (url) => {
+    if (!url) return '';
+    const trimmed = String(url).trim();
+    if (!trimmed) return '';
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
+  };
+
+  const applyUrl = getFormattedUrl(rawLink);
+
+  const handleApplyClick = (e) => {
+    if (!applyUrl) {
+      e.preventDefault();
+      alert('Application link is not available for this job listing.');
+    }
+  };
 
   return (
     <div className="job-card card">
@@ -35,7 +57,7 @@ export default function JobCard({ job }) {
       <p className="job-description">{job.description}</p>
 
       <div className="job-tags">
-        {job.tags.map(tag => (
+        {(job.tags || []).map(tag => (
           <span key={tag} className="tag">{tag}</span>
         ))}
       </div>
@@ -49,7 +71,7 @@ export default function JobCard({ job }) {
         <div className="job-requirements">
           <h4>Requirements</h4>
           <ul>
-            {job.requirements.map((req, i) => (
+            {(job.requirements || []).map((req, i) => (
               <li key={i}>
                 <span className="req-bullet">✓</span>
                 {req}
@@ -60,8 +82,14 @@ export default function JobCard({ job }) {
       )}
 
       <div className="job-card-footer">
-        <span className="job-posted">🕐 {job.posted}</span>
-        <a href={job.applyLink} target="_blank" rel="noopener noreferrer" className="btn btn-primary apply-btn">
+        <span className="job-posted">🕐 {postedDisplay}</span>
+        <a
+          href={applyUrl || '#'}
+          target={applyUrl ? "_blank" : "_self"}
+          rel="noopener noreferrer"
+          className="btn btn-primary apply-btn"
+          onClick={handleApplyClick}
+        >
           Apply Now →
         </a>
       </div>
