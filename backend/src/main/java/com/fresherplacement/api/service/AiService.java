@@ -19,6 +19,9 @@ public class AiService {
     @Value("${app.openrouter.base-url:https://openrouter.ai/api/v1}")
     private String openRouterBaseUrl;
 
+    @Value("${app.openrouter.models:meta-llama/llama-3.3-70b-instruct:free,google/gemini-2.0-flash-lite-preview-02-05:free,qwen/qwen-2.5-coder-32b-instruct:free}")
+    private String rawModels;
+
     private static final String SYSTEM_PROMPT = """
         You are FresherAI — a friendly, expert career advisor for fresh graduates and final-year students in India.
         You specialize in job hunting strategies, interview prep (DSA, HR, aptitude), resume optimization, and career roadmaps.
@@ -56,11 +59,10 @@ public class AiService {
                     apiMessages.add(Map.of("role", "user", "content", requestDto.getPrompt()));
                 }
 
-                List<String> models = List.of(
-                        "meta-llama/llama-3.3-70b-instruct:free",
-                        "google/gemini-2.0-flash-lite-preview-02-05:free",
-                        "qwen/qwen-2.5-coder-32b-instruct:free"
-                );
+                List<String> models = Arrays.stream(rawModels.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .toList();
 
                 for (String model : models) {
                     try {

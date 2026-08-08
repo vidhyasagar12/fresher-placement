@@ -89,6 +89,29 @@ public class RunJavaTests {
             failed++;
         }
 
+        // Test 4: AI Service Fallback & Prompt Response
+        try {
+            com.fresherplacement.api.service.AiService aiService = new com.fresherplacement.api.service.AiService();
+            org.springframework.test.util.ReflectionTestUtils.setField(aiService, "openRouterApiKey", "sk-or-v1-b31...101");
+            org.springframework.test.util.ReflectionTestUtils.setField(aiService, "openRouterBaseUrl", "https://openrouter.ai/api/v1");
+            org.springframework.test.util.ReflectionTestUtils.setField(aiService, "rawModels", "meta-llama/llama-3.3-70b-instruct:free");
+
+            com.fresherplacement.api.dto.AiChatRequestDto req = new com.fresherplacement.api.dto.AiChatRequestDto();
+            req.setPrompt("Top skills freshers need in 2026");
+
+            java.util.Map<String, Object> aiRes = aiService.generateCareerTip(req);
+            if (aiRes != null && Boolean.TRUE.equals(aiRes.get("success")) && aiRes.get("response") != null) {
+                System.out.println("✅ TEST 4 PASSED: AI Service produced structured career response successfully.");
+                passed++;
+            } else {
+                System.err.println("❌ TEST 4 FAILED: AI Service did not return expected response payload.");
+                failed++;
+            }
+        } catch (Exception e) {
+            System.err.println("❌ TEST 4 FAILED with exception: " + e.getMessage());
+            failed++;
+        }
+
         System.out.println("==================================================");
         System.out.println("📊 Test Summary: " + passed + " Passed, " + failed + " Failed.");
         System.out.println("==================================================");
