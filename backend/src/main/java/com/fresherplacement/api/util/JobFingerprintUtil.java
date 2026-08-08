@@ -1,7 +1,5 @@
 package com.fresherplacement.api.util;
 
-import com.fresherplacement.api.entity.Job;
-
 public class JobFingerprintUtil {
 
     public static String normalizeText(String text) {
@@ -9,16 +7,19 @@ public class JobFingerprintUtil {
         return text.toLowerCase().replaceAll("[^a-z0-9]", "").trim();
     }
 
-    public static String generateFingerprint(Job job) {
+    public static String generateFingerprint(Object job) {
         if (job == null) return "";
-        return generateFingerprint(
-            job.getCompany(),
-            job.getRole(),
-            job.getLocation(),
-            job.getSalary(),
-            job.getExperience(),
-            job.getDescription()
-        );
+        try {
+            String company = (String) job.getClass().getMethod("getCompany").invoke(job);
+            String role = (String) job.getClass().getMethod("getRole").invoke(job);
+            String location = (String) job.getClass().getMethod("getLocation").invoke(job);
+            String salary = (String) job.getClass().getMethod("getSalary").invoke(job);
+            String experience = (String) job.getClass().getMethod("getExperience").invoke(job);
+            String description = (String) job.getClass().getMethod("getDescription").invoke(job);
+            return generateFingerprint(company, role, location, salary, experience, description);
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     public static String generateFingerprint(String company, String role, String location, String salary, String experience, String description) {

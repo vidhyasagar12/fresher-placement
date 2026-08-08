@@ -89,18 +89,18 @@ public class RunJavaTests {
             failed++;
         }
 
-        // Test 4: AI Service Fallback & Prompt Response
+        // Test 4: AI Service Dynamic Placement Engine
         try {
             com.fresherplacement.api.service.AiService aiService = new com.fresherplacement.api.service.AiService();
-            org.springframework.test.util.ReflectionTestUtils.setField(aiService, "openRouterApiKey", "sk-or-v1-b31...101");
-            org.springframework.test.util.ReflectionTestUtils.setField(aiService, "openRouterBaseUrl", "https://openrouter.ai/api/v1");
-            org.springframework.test.util.ReflectionTestUtils.setField(aiService, "rawModels", "meta-llama/llama-3.3-70b-instruct:free");
+            setField(aiService, "openRouterApiKey", "sk-placeholder");
+            setField(aiService, "openRouterBaseUrl", "https://openrouter.ai/api/v1");
+            setField(aiService, "rawModels", "google/gemini-2.0-flash-lite-preview-02-05:free");
 
             com.fresherplacement.api.dto.AiChatRequestDto req = new com.fresherplacement.api.dto.AiChatRequestDto();
             req.setPrompt("Top skills freshers need in 2026");
 
             java.util.Map<String, Object> aiRes = aiService.generateCareerTip(req);
-            if (aiRes != null && Boolean.TRUE.equals(aiRes.get("success")) && aiRes.get("response") != null) {
+            if (aiRes != null && Boolean.TRUE.equals(aiRes.get("success")) && aiRes.get("response") != null && aiRes.get("response").toString().contains("Top Skills")) {
                 System.out.println("✅ TEST 4 PASSED: AI Service produced structured career response successfully.");
                 passed++;
             } else {
@@ -119,5 +119,11 @@ public class RunJavaTests {
         if (failed > 0) {
             System.exit(1);
         }
+    }
+
+    private static void setField(Object obj, String fieldName, Object value) throws Exception {
+        java.lang.reflect.Field field = obj.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(obj, value);
     }
 }

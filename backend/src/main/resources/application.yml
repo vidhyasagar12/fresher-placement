@@ -29,7 +29,7 @@ app:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971}
     expiration-ms: 86400000 # 24 Hours
   openrouter:
-    api-key: ${VITE_OPENROUTER_API_KEY:sk-or-v1-b31...101}
+    api-key: ${VITE_OPENROUTER_API_KEY:sk-or-v1-placeholder}
     base-url: https://openrouter.ai/api/v1
     models: ${OPENROUTER_MODELS:meta-llama/llama-3.3-70b-instruct:free,google/gemini-2.0-flash-lite-preview-02-05:free,qwen/qwen-2.5-coder-32b-instruct:free}
 

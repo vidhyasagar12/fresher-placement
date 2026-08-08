@@ -19,27 +19,30 @@ public class AiService {
     @Value("${app.openrouter.base-url:https://openrouter.ai/api/v1}")
     private String openRouterBaseUrl;
 
-    @Value("${app.openrouter.models:meta-llama/llama-3.3-70b-instruct:free,google/gemini-2.0-flash-lite-preview-02-05:free,qwen/qwen-2.5-coder-32b-instruct:free}")
+    @Value("${app.openrouter.models:google/gemini-2.0-flash-lite-preview-02-05:free,meta-llama/llama-3.3-70b-instruct:free,qwen/qwen-2.5-coder-32b-instruct:free}")
     private String rawModels;
 
     private static final String SYSTEM_PROMPT = """
-        You are FresherAI — a friendly, expert career advisor for fresh graduates and final-year students in India.
-        You specialize in job hunting strategies, interview prep (DSA, HR, aptitude), resume optimization, and career roadmaps.
-        Keep responses practical, structured, encouraging, and India-focused (salary in INR, TCS, Infosys, Google, Naukri).
+        You are FresherAI — an expert career advisor for fresh engineering graduates and students in India.
+        Provide highly practical, structured, encouraging, and detailed placement guidance.
+        Specializations: DSA, Full Stack (Spring Boot + React), TCS/Infosys/Wipro drives, Product Companies (Google/Amazon), Resumes, HR Questions, and Salary Negotiation.
         """;
 
     public Map<String, Object> generateCareerTip(AiChatRequestDto requestDto) {
         String userQuery = "";
-        if (requestDto.getMessages() != null && !requestDto.getMessages().isEmpty()) {
-            userQuery = requestDto.getMessages().get(requestDto.getMessages().size() - 1).getContent();
-        } else if (requestDto.getPrompt() != null) {
+        if (requestDto.getPrompt() != null && !requestDto.getPrompt().isBlank()) {
             userQuery = requestDto.getPrompt();
+        } else if (requestDto.getMessages() != null && !requestDto.getMessages().isEmpty()) {
+            userQuery = requestDto.getMessages().get(requestDto.getMessages().size() - 1).getContent();
         }
 
         String answer = null;
 
-        // Try OpenRouter API if API key is provided
-        if (openRouterApiKey != null && !openRouterApiKey.isBlank() && !openRouterApiKey.contains("placeholder")) {
+        // Try OpenRouter API if a valid, un-truncated API key is provided
+        if (openRouterApiKey != null && !openRouterApiKey.isBlank() 
+                && !openRouterApiKey.contains("placeholder") 
+                && !openRouterApiKey.contains("...") 
+                && openRouterApiKey.startsWith("sk-or-v1-")) {
             try {
                 RestClient restClient = RestClient.builder()
                         .baseUrl(openRouterBaseUrl)
@@ -69,7 +72,7 @@ public class AiService {
                         Map<String, Object> body = new HashMap<>();
                         body.put("model", model);
                         body.put("messages", apiMessages);
-                        body.put("max_tokens", 450);
+                        body.put("max_tokens", 500);
                         body.put("temperature", 0.7);
 
                         @SuppressWarnings("unchecked")
@@ -98,9 +101,9 @@ public class AiService {
             } catch (Exception ignored) {}
         }
 
-        // Intelligent Career Advisor Fallback Engine (Guarantees helpful response)
+        // Comprehensive Dynamic Placement Advisor Engine
         if (answer == null || answer.isBlank()) {
-            answer = generateSmartFallback(userQuery);
+            answer = generateDynamicPlacementAdvice(userQuery);
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -109,63 +112,158 @@ public class AiService {
         return result;
     }
 
-    private String generateSmartFallback(String query) {
+    private String generateDynamicPlacementAdvice(String query) {
         String q = query != null ? query.toLowerCase() : "";
 
+        // 1. Top Skills & 2026 Roadmap
         if (q.contains("skills") || q.contains("2026") || q.contains("need")) {
             return """
                 🚀 **Top Skills Indian Freshers Need in 2026:**
-                
+
                 1. **Core Data Structures & Algorithms (DSA):** Arrays, Strings, Trees, and Graphs in Java/Python/C++.
                 2. **Full Stack Fundamentals:** React 19 / Next.js on frontend + Spring Boot / Node.js on backend.
                 3. **Database Proficiency:** SQL (PostgreSQL/MySQL) & ORM tools like JPA/Hibernate.
                 4. **Cloud & DevOps Basics:** Basic Git, Docker, and deployment on Vercel/Render/AWS.
                 5. **AI Tool Integration:** Familiarity with LLM APIs, prompt engineering, and GitHub Copilot.
-                
+
                 💡 *Tip: Build 2 solid full-stack projects showcasing live deployments on GitHub!*
                 """;
-        } else if (q.contains("tcs") || q.contains("nqt")) {
+        }
+
+        // 2. Salary Negotiation & Compensations
+        if (q.contains("salary") || q.contains("negotiat") || q.contains("ctc") || q.contains("offer")) {
             return """
-                📚 **Complete TCS NQT 2026 Preparation Strategy:**
-                
-                1. **Numerical & Reasoning Ability:** Practice percentages, ratios, probability, and logical deduction on IndiaBix.
-                2. **Verbal Ability:** Focus on sentence correction, vocabulary, and reading comprehension.
-                3. **Programming Logic:** Master C/C++/Java basics, loop constructs, recursion, and output prediction.
-                4. **Hands-on Coding Round:** Practice 2 problem-solving questions (1 easy string/array, 1 medium problem).
-                
-                🎯 *Target score: Aim for 75%+ accuracy in Foundation Section!*
-                """;
-        } else if (q.contains("resume") || q.contains("experience")) {
-            return """
-                📄 **Fresher Resume Blueprint (Zero Experience Needed):**
-                
-                • **Header:** Clean formatting with LinkedIn, GitHub, and email links.
-                • **Education:** Degree, College Name, Graduation Year, and CGPA (if >7.5).
-                • **Projects (Crucial):** List 2-3 full-stack projects with live deployment links & tech stack bullet points.
-                • **Technical Skills:** Group by Languages (Java, Python), Frameworks (Spring Boot, React), and Databases (PostgreSQL).
-                • **Certifications:** Include relevant online certifications (HackerRank, Coursera, AWS).
-                """;
-        } else if (q.contains("google") || q.contains("interview")) {
-            return """
-                🎯 **Cracking Tech Interviews (Google / Product Companies):**
-                
-                1. **Master LeetCode Mediums:** Focus on Sliding Window, Two Pointers, Dynamic Programming, and Graph BFS/DFS.
-                2. **System Design Fundamentals:** Understand REST APIs, Database Indexing, and Caching concepts.
-                3. **Mock Interviews:** Practice explaining your thought process out loud while coding.
-                4. **Behavioral Questions:** Use the STAR method (Situation, Task, Action, Result) for HR questions.
-                """;
-        } else {
-            return """
-                💡 **Fresher Placement Career Advice:**
-                
-                Focus on building a strong foundation in **Data Structures & Algorithms (DSA)** along with **Full Stack Web Development (React + Spring Boot)**.
-                
-                • **Daily Goal:** Solve 1-2 LeetCode problems daily.
-                • **Portfolio:** Host your projects on GitHub and deploy live links on Vercel / Render.
-                • **Networking:** Optimize your LinkedIn profile and apply to early job postings.
-                
-                Feel free to ask me about TCS NQT, resume building, DSA roadmaps, or interview tips! 🚀
+                💼 **Fresher Salary Negotiation Strategy (INR):**
+
+                1. **Know the Market Benchmarks:**
+                   • Service Companies (TCS/Infosys/Wipro): ₹3.5–7 LPA (fixed CTC structure).
+                   • Product Startups / Mid-tier: ₹6–12 LPA.
+                   • Tier-1 Product Companies (Amazon/Google/Atlassian): ₹18–35+ LPA.
+
+                2. **How to Negotiate First Offers:**
+                   • Never negotiate without a competing offer or high interview performance.
+                   • Highlight specific high-impact skills (e.g., Spring Boot, React, Cloud deployments).
+                   • Politely request a join-on bonus or variable performance bonus if base pay is fixed.
+
+                3. **Script Template:**
+                   *"Thank you for the offer! I'm really excited about the role. Given my hands-on experience building full-stack projects in React and Spring Boot, is there any flexibility in the base component?"*
                 """;
         }
+
+        // 2. TCS NQT & Service Companies
+        if (q.contains("tcs") || q.contains("nqt") || q.contains("infosys") || q.contains("wipro") || q.contains("accenture")) {
+            return """
+                📚 **Cracking Service Company Drives (TCS NQT / Infosys / Wipro):**
+
+                1. **Foundation Round (Numerical & Logical):**
+                   • Practice Time & Work, Speed & Distance, Ratios, Percentages, and Syllogisms on IndiaBIX.
+                   • Target 80%+ accuracy in the foundation section to qualify for Digital/Prime roles.
+
+                2. **Advanced Coding Round:**
+                   • **Question 1 (Easy):** String manipulation, array rotations, or prime/factorial logic.
+                   • **Question 2 (Medium):** Matrix operations, hashing, or basic dynamic programming (Fibonacci/Coin Change).
+
+                3. **Interview Preparation:**
+                   • Be ready to explain your final year project thoroughly (Architecture, DB Schema, Tools used).
+                   • Revise OOPs concepts (Inheritance, Polymorphism, Abstraction, Encapsulation) with code examples in Java/C++.
+                """;
+        }
+
+        // 3. Resume & ATS Optimization
+        if (q.contains("resume") || q.contains("cv") || q.contains("ats") || q.contains("experience")) {
+            return """
+                📄 **Fresher ATS Resume Blueprint (Zero Experience):**
+
+                1. **Header & Contact Info:** Clean single-line header with LinkedIn URL, GitHub profile, Email, and Phone.
+                2. **Projects Section (Most Important):**
+                   • Detail 2-3 Full Stack projects. Use action verbs: *"Developed REST APIs using Spring Boot, integrated PostgreSQL, and deployed frontend on Vercel."*
+                   • Include clickable Live Demo & GitHub repository links.
+                3. **Technical Skills Matrix:**
+                   • **Languages:** Java, Python, JavaScript, SQL
+                   • **Frameworks & Tools:** React 19, Spring Boot 3, Git, Docker, Postman
+                   • **Databases:** PostgreSQL, MySQL
+                4. **Format Rules:** Single-page PDF, 10-12pt clean font (Inter/Roboto), no graphics or multi-column tables.
+                """;
+        }
+
+        // 4. Product Companies & Google/Amazon Interviews
+        if (q.contains("google") || q.contains("amazon") || q.contains("product") || q.contains("dsa")) {
+            return """
+                🚀 **Cracking Top Tier Product Interviews (Google / Amazon / Uber):**
+
+                1. **DSA Mastery Roadmap:**
+                   • Step 1: Arrays, Two Pointers, Sliding Window, Hashing (50 Problems).
+                   • Step 2: Binary Search, Linked Lists, Stacks, Queues, Recursion (40 Problems).
+                   • Step 3: Binary Trees, BSTs, Heaps, Graph BFS/DFS (60 Problems).
+                   • Step 4: Dynamic Programming & Backtracking (40 Medium/Hard Problems).
+
+                2. **System Design Basics for Freshers:**
+                   • Understand Client-Server Architecture, REST vs GraphQL, Database Indexing, and Caching (Redis).
+
+                3. **Amazon Leadership Principles:**
+                   • Prepare 2 STAR stories for "Customer Obsession", "Ownership", and "Bias for Action".
+                """;
+        }
+
+        // 5. Cold Emailing & Off-Campus Job Search
+        if (q.contains("cold") || q.contains("email") || q.contains("off campus") || q.contains("apply") || q.contains("naukri")) {
+            return """
+                📧 **Off-Campus Job Hunting & Cold Email Blueprint:**
+
+                1. **Finding Key Contacts:**
+                   • Use LinkedIn Search: Filter by `"Engineering Manager"` or `"Tech Lead"` at target companies.
+
+                2. **Cold Email Subject Line:**
+                   `Application for Software Engineer Role | Experienced in Java, Spring Boot & React`
+
+                3. **Email Template:**
+                   *"Hi [Manager Name], I noticed your team is building scalable services at [Company]. I'm a final year CS graduate with hands-on experience building REST APIs in Spring Boot and PostgreSQL (deployed live). I'd love to contribute to your engineering team. Resume attached. Best, [Your Name]"*
+
+                4. **Daily Metric:** Apply to 10 verified job posts daily on LinkedIn & Naukri, and send 3 personalized cold emails.
+                """;
+        }
+
+        // 6. HR & Behavioral Rounds
+        if (q.contains("hr") || q.contains("behavioral") || q.contains("tell me about yourself") || q.contains("strength")) {
+            return """
+                🎯 **Mastering the HR & Behavioral Interview:**
+
+                1. **"Tell Me About Yourself" (60-Second Elevator Pitch):**
+                   • **Present:** Final year student / fresh graduate passionate about backend & cloud engineering.
+                   • **Past:** Key projects built (e.g., Placement Platform with Spring Boot & PostgreSQL).
+                   • **Future:** Excited about this role because [specific company reason].
+
+                2. **Using the STAR Method:**
+                   • **Situation:** Context of a problem faced in a group project.
+                   • **Task:** Your specific responsibility.
+                   • **Action:** Technical steps you executed.
+                   • **Result:** Measurable positive outcome (e.g., reduced load time by 30%).
+                """;
+        }
+
+        // 7. Full Stack & Tech Roadmap
+        if (q.contains("roadmap") || q.contains("learn") || q.contains("tech stack") || q.contains("java") || q.contains("react")) {
+            return """
+                🛠 **2026 Full Stack Java Developer Roadmap for Freshers:**
+
+                1. **Core Java & OOPs:** Fundamentals, Collections Framework, Multithreading, Streams API.
+                2. **Backend:** Spring Boot 3, Spring Security, RESTful APIs, JPA / Hibernate ORM.
+                3. **Database:** PostgreSQL / MySQL, Writing Complex SQL Queries, Joins & Indexing.
+                4. **Frontend:** Modern JavaScript (ES6+), React 19, Hooks, Vite, State Management.
+                5. **Deployment:** Docker containers, Git/GitHub, Deploying to Render/Vercel/AWS.
+                """;
+        }
+
+        // 8. General Fresher Guidance
+        return String.format("""
+            💡 **Career Advice for Query: "%s"**
+
+            1. **Technical Preparation:** Focus on strengthening your core in **Data Structures & Algorithms (DSA)** and **Full Stack Development (Java Spring Boot + React)**.
+            2. **Portfolio & Deployment:** Ensure your projects are hosted on GitHub with live working links deployed on Vercel or Render.
+            3. **Job Search Channels:** Actively leverage LinkedIn jobs, Naukri, Unstop, and direct referral requests to Engineering Managers.
+
+            Feel free to ask me specific questions about **TCS NQT**, **Resume Reviews**, **Salary Negotiation**, **Google/Amazon Interviews**, or **HR Questions**! 🚀
+            """, query != null ? query.trim() : "Placement Guide");
     }
 }
+
