@@ -10,8 +10,8 @@ env:
   ACTIONS_NODE20_DEPRECATION_WARNING: 'false'
 
 jobs:
-  lint-and-build:
-    name: 🧪 Quality Check & Build Verification
+  frontend-check:
+    name: ⚛️ Frontend Quality & Build Verification
     runs-on: ubuntu-latest
 
     steps:
@@ -23,23 +23,44 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: 📦 Install dependencies
-        run: npm ci
+      - name: 📦 Install Frontend dependencies
+        run: npm --prefix frontend ci
 
       - name: 🔍 Run Linter
-        run: npm run lint
+        run: npm --prefix frontend run lint
+
+      - name: 🧪 Run Frontend Unit Tests
+        run: npm --prefix frontend run test
 
       - name: 🏗️ Run Production Build Check
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder-key' }}
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || 'http://localhost:8080' }}
           VITE_OPENROUTER_API_KEY: ${{ secrets.VITE_OPENROUTER_API_KEY || 'placeholder-key' }}
-        run: npm run build
+        run: npm --prefix frontend run build
+
+  backend-check:
+    name: ☕ Java Spring Boot Backend Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: 🏗️ Compile & Verify Java Backend
+        run: cd backend && mvn clean compile -B
 
   release-check:
     name: 🚀 Production Readiness Check
-    needs: lint-and-build
+    needs: [frontend-check, backend-check]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 

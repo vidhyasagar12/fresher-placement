@@ -1,13 +1,16 @@
-# dependencies
-/node_modules
-/dist
+# dependencies & build
+node_modules/
+frontend/node_modules/
+frontend/dist/
+backend/target/
 
-# env
+# env files
 .env
 .env.local
 .env.production
+frontend/.env
 
-# misc
-.DS_Store
+# IDE & misc
 .vscode/
-npm-debug.log*
+.DS_Store
+*.log
