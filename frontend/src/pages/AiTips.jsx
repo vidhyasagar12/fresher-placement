@@ -64,7 +64,7 @@ export default function AiTips() {
       }
     }, 50);
 
-    const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
 
     const apiMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -73,46 +73,31 @@ export default function AiTips() {
         .map(m => ({ role: m.role, content: m.content }))
     ];
 
-    const models = [
-      'meta-llama/llama-3-8b-instruct:free',
-      'google/gemini-2.5-flash',
-      'openai/gpt-3.5-turbo',
-    ];
-
     let response = null;
     let error = null;
 
-    for (const model of models) {
-      try {
-        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
-            'HTTP-Referer': window.location.origin,
-            'X-Title': 'FresherPlacement AI',
-          },
-          body: JSON.stringify({
-            model,
-            messages: apiMessages,
-            max_tokens: 500,
-            temperature: 0.7,
-          }),
-        });
+    try {
+      const res = await fetch(`${baseUrl}/api/v1/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: msg,
+          messages: apiMessages,
+        }),
+      });
 
-        if (res.ok) {
-          const data = await res.json();
-          if (data.choices?.[0]?.message?.content) {
-            response = data.choices[0].message.content;
-            break;
-          }
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.response) {
+          response = data.response;
         } else {
-          const err = await res.json().catch(() => ({}));
-          error = err.error?.message || `HTTP ${res.status}`;
+          error = data.error || 'Failed to generate AI response';
         }
-      } catch (e) {
-        error = e.message;
+      } else {
+        error = `Backend API returned status ${res.status}`;
       }
+    } catch (e) {
+      error = `Connection failed: ${e.message}`;
     }
 
     setLoading(false);
@@ -121,7 +106,7 @@ export default function AiTips() {
     } else {
       setMessages(prev => [
         ...prev,
-        { role: 'assistant', content: `⚠️ Sorry, I'm having trouble connecting right now. Please try again in a moment.\n\n*Error: ${error || 'Unknown error'}*` }
+        { role: 'assistant', content: `⚠️ ${error || 'Unable to connect to AI server.'}` }
       ]);
     }
   };
