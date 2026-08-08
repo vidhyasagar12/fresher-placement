@@ -61,7 +61,8 @@ public class AiService {
                 body.put("max_tokens", 400);
                 body.put("temperature", 0.7);
 
-                Map response = restClient.post()
+                @SuppressWarnings("unchecked")
+                Map<String, Object> response = restClient.post()
                         .uri("/chat/completions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(body)
@@ -69,13 +70,15 @@ public class AiService {
                         .body(Map.class);
 
                 if (response != null && response.containsKey("choices")) {
-                    List choices = (List) response.get("choices");
-                    if (!choices.isEmpty()) {
-                        Map choice = (Map) choices.get(0);
-                        Map message = (Map) choice.get("message");
-                        answer = (String) message.get("content");
-                        if (answer != null && !answer.isBlank()) {
-                            break;
+                    List<?> choices = (List<?>) response.get("choices");
+                    if (choices != null && !choices.isEmpty()) {
+                        Map<?, ?> choice = (Map<?, ?>) choices.get(0);
+                        Map<?, ?> message = (Map<?, ?>) choice.get("message");
+                        if (message != null) {
+                            answer = (String) message.get("content");
+                            if (answer != null && !answer.isBlank()) {
+                                break;
+                            }
                         }
                     }
                 }

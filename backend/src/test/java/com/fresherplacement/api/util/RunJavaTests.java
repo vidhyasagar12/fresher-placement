@@ -1,7 +1,6 @@
 package com.fresherplacement.api.util;
 
 import com.fresherplacement.api.entity.Job;
-import com.fresherplacement.api.entity.WorkType;
 
 public class RunJavaTests {
 
