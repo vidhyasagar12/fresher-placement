@@ -6,7 +6,7 @@ You specialize in:
 - Job hunting strategies for freshers
 - Interview preparation (DSA, HR, aptitude, system design)
 - Resume writing and optimization
-- Company-specific tips (TCS, Infosys, Google, Amazon, etc.)
+- Company-specific tips (TCS, Infosys, Google, Amazon, startups,)
 - Career roadmaps for software engineering, data science, and other tech roles
 - LinkedIn and portfolio building
 - Salary negotiation for first jobs
@@ -16,11 +16,11 @@ Keep responses:
 - Structured with bullet points or numbered steps when helpful
 - Warm and encouraging — freshers need motivation too!
 - Concise but thorough (not too long)
-- India-focused (company names, salary in INR, relevant platforms like Naukri, LinkedIn)`;
+- India-focused (company names, salary in INR, relevant platforms like Naukri, LinkedIn, etc.)`;
 
 const SUGGESTIONS = [
-  "How to crack TCS NQT 2025?",
-  "Top skills freshers need in 2025",
+  "How to crack TCS NQT 2026?",
+  "Top skills freshers need in 2026",
   "How to write a resume with no experience?",
   "Tips to clear Google fresher interview",
   "Best DSA roadmap for beginners",
@@ -36,12 +36,17 @@ export default function AiTips() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const bottomRef = useRef(null);
+  const chatContainerRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const container = chatContainerRef.current;
+    if (!container) return;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+    if (isNearBottom) {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    }
+  }, [messages, loading]);
 
   const sendMessage = async (text) => {
     const msg = (text || input).trim();
@@ -52,6 +57,12 @@ export default function AiTips() {
     setMessages(updatedMsgs);
     setInput('');
     setLoading(true);
+
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
+      }
+    }, 50);
 
     const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
 
@@ -179,7 +190,7 @@ export default function AiTips() {
           </div>
 
           {/* Messages */}
-          <div className="ai-messages">
+          <div className="ai-messages" ref={chatContainerRef}>
             {messages.map((msg, i) => (
               <div key={i} className={`ai-message ${msg.role}`}>
                 {msg.role === 'assistant' && (
@@ -200,7 +211,6 @@ export default function AiTips() {
                 </div>
               </div>
             )}
-            <div ref={bottomRef} />
           </div>
 
           {/* Input */}
